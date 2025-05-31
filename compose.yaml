@@ -1,0 +1,9 @@
+name: shiny_app
+services:
+  shiny_app:
+    build: .
+    platform: linux/amd64 
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    ports:
+      - "8181:8181"
