@@ -67,10 +67,18 @@ ui <- page_sidebar(
   ),
   card(
     card_header(
-      textOutput("pokemon_id"),
+      textOutput("pokemon"),
     ),
     card_body(
-      textOutput("base_stats")
+      textOutput("id")
+    )
+  ),
+  card(
+    card_header(
+      textOutput("base stats"),
+    ),
+    card_body(
+      tableOutput("base_stats")
     )
   )
 )
@@ -79,16 +87,29 @@ server <- function(input, output, session){
   
   dex <- reactive({
     req(input$pokemon_name)
-    dex <- jsonlite::read_json(glue::glue("data/{stringr::str_to_lower(input$pokemon_name)}.json"))
-    output <- as.character(dex$id)
+    dex <- jsonlite::fromJSON(glue::glue("data/{stringr::str_to_lower(input$pokemon_name)}.json"),flatten=TRUE)
   })
 
-  output$pokemon_id <- renderText({
+  output$pokemon <- renderText({
     input$pokemon_name
   })
 
-  output$base_stats <- renderText({
-    dex()
+  output$id <- renderText({
+    glue::glue('Pokedex Entry #{
+    dex()$id |> 
+      as.character()
+    }
+    ')
+  })
+
+  output$base_stats <- renderTable({
+    dex()$stats |>
+      tibble::as_tibble() |>
+      select(base_stat, stat.name ) |>
+      rename(stat_name = stat.name) |>
+      tidyr::pivot_wider(
+        names_from = stat_name, values_from = base_stat
+      )
   })
 
 }
