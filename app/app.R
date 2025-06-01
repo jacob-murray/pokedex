@@ -1,5 +1,6 @@
 # libraries
 library(dplyr)
+library(ggplot2)
 library(jsonlite)
 library(shiny)
 library(bslib)
@@ -25,6 +26,9 @@ color_dictionary <- c(
 	'steel'='#B7B7CE',
 	'fairy'='#D685AD'
 )
+
+base_stat_order <- c('hp', 'attack', 'defense', 'speed',
+                     'sp attack', 'sp defense')
 
 pokemon_choices <- c("Bulbasaur","Ivysaur","Venusaur", "Charmander",
                      "Charmeleon","Charizard","Squirtle",
@@ -75,10 +79,18 @@ ui <- page_sidebar(
   ),
   card(
     card_header(
-      textOutput("base stats"),
+      textOutput("type_color_primary")
     ),
     card_body(
       tableOutput("base_stats")
+    )
+  ),
+  card(
+    card_header(
+      textOutput("type_color_secondary")
+    ),
+    card_body(
+      plotOutput("base_stats_plot")
     )
   )
 )
@@ -88,6 +100,40 @@ server <- function(input, output, session){
   dex <- reactive({
     req(input$pokemon_name)
     dex <- jsonlite::fromJSON(glue::glue("data/{stringr::str_to_lower(input$pokemon_name)}.json"),flatten=TRUE)
+  })
+
+  pokemon_type_primary <- reactive({
+    dex()$types$type.name[1] |>
+      as.character()
+  })
+
+  pokemon_type_secondary <- reactive({
+    # creating types
+    if(!is.na(dex()$types$type.name[2])){
+      print('secondary type exists')
+      dex()$types$type.name[2] |>
+        as.character()
+    } else{
+      print('secondary type does not exist')
+      NA
+    }
+  })
+
+  type_color_primary <- reactive({
+    color_dictionary[
+      dex()$types$type.name[1] |>
+      as.character()]
+  })
+
+  type_color_secondary <- reactive({
+    
+    if(!is.na(dex()$types$type.name[2])){
+    color_dictionary[
+      dex()$types$type.name[2] |>
+      as.character()]
+    } else {
+      "#D3D3D3"
+    }
   })
 
   output$pokemon <- renderText({
@@ -110,6 +156,28 @@ server <- function(input, output, session){
       tidyr::pivot_wider(
         names_from = stat_name, values_from = base_stat
       )
+  })
+
+  output$base_stats_plot <- renderPlot({
+    dex()$stats |>
+      tibble::as_tibble() |>
+      select(base_stat, stat.name ) |>
+      rename(stat_name = stat.name) |>
+      mutate(stat_name = case_when(stat_name == "special-attack" ~ 'sp attack',
+                                   stat_name == "special-defense" ~ 'sp defense',
+                                  .default = stat_name)) |>
+      mutate(stat_name = factor(stat_name, levels = base_stat_order)) %>%
+      ggplot(aes(x=stat_name, y=base_stat)) +
+      geom_segment(aes(xend=stat_name, yend=0, color=type_color_primary()), 
+                       linewidth = 4.5
+                       ) +
+      scale_colour_identity() +
+      geom_point(size=4, color=type_color_secondary()) +
+      theme_minimal() +
+      theme(axis.title.y=element_blank(),
+            axis.title.x.bottom = element_blank(),
+            axis.ticks.x=element_blank()) + 
+      scale_x_discrete(guide = guide_axis(n.dodge = 2))
   })
 
 }
