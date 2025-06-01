@@ -159,6 +159,10 @@ server <- function(input, output, session){
   })
 
   output$base_stats_plot <- renderPlot({
+
+    max_stat <- dex()$stats |>
+      summarize(max = max(base_stat, na.rm = T))
+
     dex()$stats |>
       tibble::as_tibble() |>
       select(base_stat, stat.name ) |>
@@ -169,15 +173,17 @@ server <- function(input, output, session){
       mutate(stat_name = factor(stat_name, levels = base_stat_order)) %>%
       ggplot(aes(x=stat_name, y=base_stat)) +
       geom_segment(aes(xend=stat_name, yend=0, color=type_color_primary()), 
-                       linewidth = 4.5
+                       linewidth = 18
                        ) +
       scale_colour_identity() +
-      geom_point(size=4, color=type_color_secondary()) +
-      theme_minimal() +
-      theme(axis.title.y=element_blank(),
+      geom_point(size=18, color=type_color_secondary()) +
+      theme_bw() +
+      theme(text = element_text(size = 25),
+            axis.title.y=element_blank(),
             axis.title.x.bottom = element_blank(),
             axis.ticks.x=element_blank()) + 
-      scale_x_discrete(guide = guide_axis(n.dodge = 2))
+      scale_x_discrete(guide = guide_axis(angle = 75)) +
+      ylim(0, max(max_stat) * 1.1)
   })
 
 }
