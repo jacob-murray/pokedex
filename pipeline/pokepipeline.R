@@ -1,40 +1,38 @@
-# pokemon 151
-pokemon_choices <- c("Bulbasaur","Ivysaur","Venusaur",
-                     "Charmander","Charmeleon","Charizard","Squirtle",
-                     "Wartortle","Blastoise","Caterpie","Metapod",
-                     "Butterfree","Weedle","Kakuna","Beedrill",
-                     "Pidgey","Pidgeotto","Pidgeot","Rattata",
-                     "Raticate","Spearow","Fearow","Ekans","Arbok",
-                     "Pikachu","Raichu","Sandshrew","Sandslash",
-                     "Nidoking","Clefairy","Clefable","Vulpix","Ninetales",
-                     "Jigglypuff","Wigglytuff","Zubat","Golbat","Oddish",
-                     "Gloom","Vileplume","Paras","Parasect","Venonat",
-                     "Venomoth","Diglett","Dugtrio","Meowth","Persian","Psyduck",
-                     "Golduck","Mankey","Primeape","Growlithe","Arcanine",
-                     "Poliwag","Poliwhirl","Poliwrath","Abra","Kadabra",
-                     "Alakazam","Machop","Machoke","Machamp","Bellsprout",
-                     "Weepinbell","Victreebel","Tentacool","Tentacruel",
-                     "Geodude","Graveler","Golem","Ponyta","Rapidash",
-                     "Slowpoke","Slowbro","Magnemite","Magneton","Farfetchd",
-                     "Doduo","Dodrio","Seel","Dewgong","Grimer","Muk","Shellder",
-                     "Cloyster","Gastly","Haunter","Gengar","Onix","Drowzee",
-                     "Hypno","Krabby","Kingler","Voltorb","Electrode",
-                     "Exeggcute","Exeggutor","Cubone","Marowak","Hitmonlee",
-                     "Hitmonchan","Lickitung","Koffing","Weezing","Rhyhorn",
-                     "Rhydon","Chansey","Tangela","Kangaskhan","Horsea","Seadra",
-                     "Goldeen","Seaking","Staryu","Starmie","Mr-Mime","Scyther",
-                     "Jynx","Electabuzz","Magmar","Pinsir","Tauros","Magikarp",
-                     "Gyarados","Lapras","Ditto","Eevee","Vaporeon","Jolteon",
-                     "Flareon","Porygon","Omanyte","Omastar","Kabuto","Kabutops",
-                     "Aerodactyl","Snorlax","Articuno","Zapdos","Moltres","Dratini",
-                     "Dragonair","Dragonite","Mewtwo","Mew")
+# empty dex dictionary
+dex_df <- tibble(
+  id  = NA,
+  pokemon_name = NA,
+  pokemon_name_str = NA,
+  local_url = NA,
+  first_game = NA
+  )
 
-# fetching data for gen 1
-for(name in pokemon_choices){
-	print(name)
-  pokemon <- stringr::str_to_lower(name)
-  url <- glue::glue('https://pokeapi.co/api/v2/pokemon/{stringr::str_to_lower(pokemon)}')
+for(i in 1:1){
+  
+  print(i)
+  pokemon_id <- i
+  url <- glue::glue('https://pokeapi.co/api/v2/pokemon/{i}')
   result <- httr::GET(url)
   data <- jsonlite::fromJSON(httr::content(result,"text"),flatten=TRUE)
-  jsonlite::write_json(data, glue::glue("data/{pokemon}.json"))
+  pokemon_name <- data$species$name
+  pokemon_name_str <- stringr::str_replace(pokemon_name, "-", "_")
+  jsonlite::write_json(data, glue::glue("data/dex/{pokemon_name_str}.json"))
+  pokemon_id = data$id
+  first_game = data$game_indices$version.name[1]
+  
+  dex_df <- add_row(dex_df, 
+                    id = pokemon_id,
+                    pokemon_name = pokemon_name,
+                    pokemon_name_str = pokemon_name_str,
+                    local_url = glue::glue("data/dex/{pokemon_name_str}.json"),
+                    first_game = first_game)
+  
+  Sys.sleep(time = 1)
+  
 }
+
+dex_df_final <- dex_df |>
+  filter(!is.na(id))
+
+readr::write_csv(dex_df_final, "data/dex_dictionary.csv")
+
